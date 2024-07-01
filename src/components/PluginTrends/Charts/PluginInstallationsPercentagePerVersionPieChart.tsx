@@ -2,6 +2,9 @@ import React, { useEffect, useRef, useMemo } from 'react'
 import * as echarts from 'echarts'
 import dayjs from 'dayjs'
 import { PluginChartProps } from '../../../data/plugins'
+import customTheme from '../../../theme/customTheme'
+
+echarts.registerTheme('customTheme', customTheme)
 
 const PluginInstallationsPercentagePerVersionChart: React.FC<PluginChartProps> = ({ data }) => {
     const chartRef = useRef(null)
@@ -55,24 +58,12 @@ const PluginInstallationsPercentagePerVersionChart: React.FC<PluginChartProps> =
                     color: '#fff',
                 },
             },
-            legend: {
-                type: 'scroll', // Make the legend scrollable
-                orient: 'vertical',
-                left: 'left',
-                padding: [20, 20, 20, 20],
-                data: formattedData.map((item) => item.name),
-                textStyle: {
-                    fontSize: 10,
-                },
-                scrollBehavior: 'smooth',
-            },
             series: [
                 {
                     name: 'Installations Percentage',
                     type: 'pie',
                     radius: '50%',
                     data: formattedData,
-                    startAngle: 300,
                     emphasis: {
                         itemStyle: {
                             shadowBlur: 10,
@@ -94,7 +85,7 @@ const PluginInstallationsPercentagePerVersionChart: React.FC<PluginChartProps> =
             toolbox: {
                 feature: {
                     saveAsImage: {
-                        title: 'Save as Image',
+                        title: 'Save as SVG',
                     },
                 },
             },
@@ -104,7 +95,7 @@ const PluginInstallationsPercentagePerVersionChart: React.FC<PluginChartProps> =
     useEffect(() => {
         if (!chartRef.current) return
 
-        const chart = echarts.init(chartRef.current)
+        const chart = echarts.init(chartRef.current, 'customTheme', { renderer: 'svg' })
         chart.setOption(option)
 
         const handleResize = () => {

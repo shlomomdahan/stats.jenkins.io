@@ -2,6 +2,9 @@ import React, { useEffect, useRef, useMemo } from 'react'
 import * as echarts from 'echarts'
 import dayjs from 'dayjs'
 import { PluginChartProps } from '../../../data/plugins'
+import customTheme from '../../../theme/customTheme'
+
+echarts.registerTheme('customTheme', customTheme)
 
 const PluginInstallationsChart: React.FC<PluginChartProps> = ({ data }) => {
     const chartRef = useRef<HTMLDivElement | null>(null)
@@ -85,7 +88,9 @@ const PluginInstallationsChart: React.FC<PluginChartProps> = ({ data }) => {
             toolbox: {
                 feature: {
                     restore: {},
-                    saveAsImage: {},
+                    saveAsImage: {
+                        title: 'Save as SVG',
+                    },
                 },
             },
             grid: {
@@ -124,7 +129,7 @@ const PluginInstallationsChart: React.FC<PluginChartProps> = ({ data }) => {
     useEffect(() => {
         if (!chartRef.current) return
 
-        const myChart = echarts.init(chartRef.current)
+        const myChart = echarts.init(chartRef.current, 'customTheme', { renderer: 'svg' })
         myChart.setOption(option)
 
         const handleResize = () => myChart.resize()

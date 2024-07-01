@@ -10,6 +10,10 @@ pipeline {
     label 'linux-arm64-docker || arm64linux'
   }
 
+  environment {
+    INFRASTATISTICS_LOCATION = 'src/data/infra-statistics'
+  }
+
   stages {
     stage('Check for typos') {
       steps {
@@ -39,8 +43,13 @@ pipeline {
       }
     }
 
-    stage('Build PR') {
-      when { changeRequest() }
+    stage('Retrieve data from infra-statistics') {
+      steps {
+        sh './retrieve-infra-statistics-data.sh'
+      }
+    }
+
+    stage('Build') {
       steps {
         sh '''
         npm run build
@@ -48,26 +57,31 @@ pipeline {
       }
     }
 
-    stage('Deploy PR to preview site') {
+    stage('Deploy to production') {
       when {
         allOf{
-          changeRequest target: 'main'
+          expression { env.BRANCH_IS_PRIMARY }
           // Only deploy from infra.ci.jenkins.io
           expression { infra.isInfra() }
         }
       }
-      environment {
-        NETLIFY_AUTH_TOKEN = credentials('netlify-auth-token')
-      }
       steps {
-        sh 'netlify-deploy --draft=true --siteName "stats-jenkins-io" --title "Preview deploy for ${CHANGE_ID}" --alias "deploy-preview-${CHANGE_ID}" -d ./dist'
-      }
-      post {
-        success {
-          recordDeployment('jenkins-infra', 'stats.jenkins.io', pullRequest.head, 'success', "https://deploy-preview-${CHANGE_ID}--stats-jenkins-io.netlify.app")
-        }
-        failure {
-          recordDeployment('jenkins-infra', 'stats.jenkins.io', pullRequest.head, 'failure', "https://deploy-preview-${CHANGE_ID}--stats-jenkins-io.netlify.app")
+        script {
+          infra.withFileShareServicePrincipal([
+            servicePrincipalCredentialsId: 'infraci-stats-jenkins-io-fileshare-service-principal-writer',
+            fileShare: 'stats-jenkins-io',
+            fileShareStorageAccount: 'statsjenkinsio'
+          ]) {
+            sh '''
+            # Synchronize the File Share content
+            set +x
+            azcopy sync \
+              --skip-version-check \
+              --recursive=true \
+              --delete-destination=true \
+              ./dist/ "${FILESHARE_SIGNED_URL}"
+            '''
+          }
         }
       }
     }
